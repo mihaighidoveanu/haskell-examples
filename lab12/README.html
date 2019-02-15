@@ -1,0 +1,151 @@
+
+<html>
+<head>
+<title>Lab 12</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <link rel="stylesheet" type="text/css" href="https://www.dropbox.com/s/48bx1xvl42hr5gp/progdecl.css?dl=1">
+  <script type="text/javascript" src="https://www.dropbox.com/s/hk9x49z7vmznfp9/progdecl.js?dl=1">
+  </script>
+</head>
+
+<body>
+
+<h1> Input / Output </h1>
+
+<div class="entry-content">
+						<h2 id="functions">Functions</h2>
+<p>There are several important functions when dealing with interactive Haskell programs:</p>
+<h3 id="interact">interact</h3>
+<p><tt>interact</tt> takes a function of type <tt>String -&gt; String</tt>, and the entire input from stdin is passed to this function as its input, and the resulting string is output on stdout. Because of the nature of Haskell, the output will seem interactive as it gets evaluated bit by bit; but the function provided is written as if the whole input is specified at once. Remember to think of functional programming as not having a concept of time.</p>
+<h3 id="unlines">unlines</h3>
+<p><tt>unlines</tt> takes a list, and returns it interleaved with newlines, such as:</p>
+<pre><tt>Input: unlines ["aa","bb","cc","dd","ee"]
+Output: "aa\nbb\ncc\ndd\nee\n"</tt></pre>
+<h3 id="lines">lines</h3>
+<p><tt>lines</tt> is the reverse of unlines, essentially:</p>
+<pre><tt>Input: lines "aa\nbb\nbb"
+Output: ["aa","bb","bb"]</tt></pre>
+<h3 id="unlines">unwords</h3>
+<p><tt>unwords</tt> takes a list, and returns it interleaved with spaces, such as:</p>
+<pre><tt>Input: unwords ["aa","bb","cc","dd","ee"]
+Output: "aa bb cc dd ee"</tt></pre>
+<h3 id="lines">words</h3>
+<p><tt>words</tt> is the reverse of unwords, essentially:</p>
+<pre><tt>Input: words "aa bb bb"
+Output: ["aa","bb","bb"]</tt></pre>
+<h3 id="unlines">show</h3>
+<p><tt>show</tt> takes an element of a type instance of the <tt>Show</tt> typeclass and formats it as a string:</p>
+<pre><tt>Input: show 3.14
+Output: "3.14"</tt></pre>
+<h3 id="lines">read</h3>
+<p><tt>read</tt> is the reverse of <tt>show</tt>, essentially:</p>
+<pre><tt>Input: read "3.14" ::Float
+Output: 3.14</tt></pre>
+
+<h2 id="writing_interactive_programs">Writing interactive programs</h2>
+<p>Although there are more complicated variations, generally, interactive programs seem to be of the form:</p>
+<pre><tt>some_fun :: Show argument =&gt; [argument] -&gt; String -&gt; String
+some_fun xs = unlines . map doSomething . lines</tt></pre>
+
+<h2 id="why_does_this_work">Why does this work?</h2>
+<p>Haskell uses ‘Lazy Evaluation’ which is a strategy for program reduction. It works by not evaluating arguments to functions until they are needed, and even then only evaluating as much as is needed by the function. This is why infinite data structures can be used in Haskell. The following would be impossible with strict evaluation…</p>
+<pre><tt>numbers = numsFrom 0
+	where
+	numsFrom n = n : numsFrom (n+1)
+head numbers</tt></pre>
+<p>…because the programming language would try to evaluate the entire <tt>numbers</tt> list (which is infinite) just to return the first element. In Haskell, due to lazy evaluation, this will work.</p>
+<p>An interactive program can therefore be formulated as a lazily evaluated function from a list of the user’s inputs to a list of program’s outputs. The computation of the program’s output list always proceeds as far as possible when evaluating the user’s input list, suspending reduction only when the next item in the list is strictly needed.</p>
+</div>
+
+<h3>Exercises</h3>
+<ol>
+	<li> Write a program which reads a line containing a space-separated list of floating point numbers and does the following
+	<ol type = "a">
+	<li> Prints on the first line the sum of the numbers
+	<li> Prints on the second line the list of numbers in reversed order, separated by spaces
+	<li> Prints on the third line the list of numbers sorted in ascending order separated by commas (lookup <tt>intersperse</tt>)
+	</ol>
+	<li> Write a program which reads a line containing an integer number <tt>n</tt>, followed by <tt>n</tt> lines, each containing a pair of numbers,
+	and writes to the output the sum of each pair in the order read, each on a separate line.
+	Example:
+	<table><tr><th>Input</th><td>&nbsp;</td><th>Output</th></tr>
+	<tr><td>
+	<pre>
+	3
+	4 6
+	2 6
+	3 8
+	</pre>
+	</td>
+	<td></td>
+	<td>
+	<pre>
+	10
+	8
+	11
+	</pre>
+	</td>
+	</tr>
+	</table>  
+	</ol>
+	
+
+<h2>UNIX terminal fun </h2>
+<address>from <a href="https://www.fer.unizg.hr/_download/repository/puh-2015-ha2.pdf">University of Zagreb</a></address>
+<hr>
+Your task is to implement simple versions of the following unix command-line
+utilities. The main part of each utility should be inside a pure function and at the
+end they will be coupled with input/output.
+<h3>Exercises</h3>
+<ol>
+<li> The wc (wordcount) utility, printing the number of lines, words and characters
+within the string.
+<pre>
+wc :: String -> (Int, Int, Int)
+let test = "Tiny sample file\ncontaining a haiku\nvery impressive"
+
+Main> wc test == (3 8 51)
+</pre>
+<li> The paste utility, pairing up lines from two inputs and joining them with a tab
+character.
+<pre>
+paste :: [String] -> [String] -> [String]
+let ps = ["not", "is not", "at all, really."]
+
+paste (lines test) ps ==
+   ["Tiny sample file\tnot, "containing a haiku\tis not",
+	 "very impressive\tat all, really."]
+
+let moreLines = ["This one, "has more, "lines"]
+let lessLines = ["no"]
+paste moreLines lessLines ==
+	["This one\tno", "has more", "lines"]
+</pre>
+<li> The cut utility, taking a delimiter, index and contents as lines, then cuts out
+a portion of each line. The parts are separated by the given delimiter and the
+output part is determined by the given index. Column numbering starts from
+1. You can assume separators will always be of length 1.
+<pre>
+cut :: String -> Int -> [String] -> [String]
+let scores = ["1#Marko#99.85", "2#Iva#99.30", "3#Pasko#90.00"]
+
+cut "#" 2 scores == ["Marko", "Iva", "Pasko"]
+</pre>
+<li> Let’s make the code runnable from the command line and define the main
+function. It will take arguments on the command line, with the first being the
+name of our utility function.
+Hint: Take a look at <tt>readFile</tt> and <tt>System.Environment.getArgs</tt>.
+<pre>
+> ./Lab12 wc test.txt
+3 8 51
+> ./Lab12 paste test.txt ps.txt
+Tiny sample file not
+containing a haiku is not
+very impressive at all, really.
+> ./Lab12 cut # 2 scores.txt
+Marko
+Iva
+Pasko
+</pre>
+</body>
+</html>

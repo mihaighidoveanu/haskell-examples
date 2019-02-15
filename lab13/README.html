@@ -1,0 +1,260 @@
+
+<html>
+<head>
+<title>Lab 13</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <link rel="stylesheet" type="text/css" href="https://www.dropbox.com/s/48bx1xvl42hr5gp/progdecl.css?dl=1">
+  <script type="text/javascript" src="https://www.dropbox.com/s/hk9x49z7vmznfp9/progdecl.js?dl=1">
+  </script>
+</head>
+
+<body>
+
+<h1> Functor and Applicative</h1>
+
+
+
+
+
+<h3>Exercise 1 - file Lab13.hs </h3>
+Recall that <tt>Maybe</tt>  is an instance of  <tt>Applicative</tt>.
+<ul>
+<li> Define  <tt> fct1 = Just (+3) </tt> and <tt>fct2 = (+) <$> (Just 3)</tt>.  Find the
+type of <tt>fct1</tt> and <tt>fct2</tt>. Using <tt> quickCheck</tt> test that <tt> fct1</tt> and
+<tt>fct2</tt> give the same result when applied to values of type <tt> Maybe Integer </tt>.
+</li>
+<li> Write generic functions
+<pre>
+gen1, gen2 :: Integer -> Maybe (Integer -> Integer)
+</pre>
+such that <tt> fct1 = gen1 n </tt> and <tt> fct2 = gen2 n </tt>.  Using <tt> quickCheck</tt> test the equality of
+<tt> gen1</tt> and  <tt>gen2</tt>.
+</li>
+</ul>
+
+<h3>Exercise 2 - file Lab13.hs</h3>
+Recall the laws of the Applicative functors:
+<pre>
+pure id <*> v = v                            -- identity
+pure (.) <*> u <*> v <*> w = u <*> (v <*> w) -- composition
+pure f <*> pure x = pure ( f x)              -- homomorphism
+u <*> pure y = pure ($ y) <*> u              -- interchange
+</pre>
+
+Using <tt> quickCheck </tt> verify that the <tt> Applicative </tt> instance of <tt> Maybe </tt> obeys these rules.
+When functions <tt>Integer -> Integer</tt> are
+required, use the sections <tt> (+x)</tt> and <tt> (*x)</tt>.
+
+<h3>Exercise 3 - file Lab13Arb.hs</h3>
+<ul>
+<li> Define the algebraic data type <tt> Arb a</tt> for binary trees whose interior nodes have the type <tt>a</tt> and
+whose leaves are equal to <tt> Nil</tt>. </li>
+<li> Make <tt> Arb a</tt> an instance of the class <tt> Functor </tt>. </li>
+<li> Make <tt> Arb a</tt> an instance of the class <tt> Applicative</tt> such that <tt> pure x</tt> is the infinite tree that
+has all the internal nodes equal to <tt> x</tt>. Pay attention to the definition of <tt> <*> </tt> : the first argument
+is a tree whose internal nodes are functions! Check the definitions, e.g. try  <tt> (pure sqrt) <*> exTree </tt> in GHCi.
+</li>
+<li> Write a function <tt> listToArb :: [a] -> Arb a</tt> that associate a tree to a list of values. Using this function,
+use <tt>quickCheck</tt> to verify that the <tt> Applicative </tt> laws hold for your definition of <tt> Arb a</tt> as an instance of
+<tt> Applicative </tt>.
+</li>
+</ul>
+
+
+
+
+
+<h3>Exercise 4 - file Lab13Parser.hs</h3>
+
+In this exercise we follow <it>  Graham Hutton, Programming in Haskell, 2nd edition, Chapter 13</it>.
+ We define a generic parser as follows:
+<pre>
+newtype Parser a = P (String -> [(a,String)])
+ </pre>
+ Note that the parser type can  be read as a rhyme:
+ <pre>
+A parser for things
+Is a function from strings
+To lists of pairs
+Of things and strings
+ </pre>
+The first parsing primitive is
+<pre>
+parserChar  :: Parser Char
+parserChar = P (\inp -> case inp of
+                    []      -> []
+                    (x:xs)  -> [(x,xs)])
+</pre>
+which fails if the input string is empty and succeds with the first character otherwise.
+<ul>
+<li> Write  the function
+<pre> parse :: Parser a -> String -> [(a,String)] </pre>
+that applies a parser to the input string.
+<pre>
+*Lab13Parser> parse parserChar "abc"
+[('a',"bc")]
+</pre>
+</li>
+</ul>
+
+We make <tt> Parser </tt> an instance of <tt> Functor</tt> as follows:
+<pre>
+instance Functor Parser where
+fmap g p = P (\inp -> case parse p inp of
+                          []        -> []
+                          [(v,out)] -> [(g v,out)])
+</pre>
+
+Try the above definition:
+<pre>
+*Lab13Parser> parse (fmap toUpper parserChar) "abc"
+[('A',"bc")]
+*Lab13Parser> parse (fmap succ parserChar) "abc"
+[('b',"bc")]
+</pre>
+<ul>
+<li> Write a parser <tt>parserCharOrd</tt> that succeds with the <tt> ord </tt> value of the first character
+(see the function <tt> ord </tt> from <tt> Data.Char </tt>).
+<pre>
+*Lab13Parser> parse parserCharOrd "abc"
+[(97,"bc")]
+</pre>
+</li> </ul>
+We further make <tt> Parser </tt> an instance of the class <tt> Applicative </tt>
+
+<pre>
+instance Applicative Parser where
+pure v = P (\inp -> [(v,inp)])
+pg <*> px = P (\inp -> case parse pg inp of
+                            []        -> []
+                            [(g,out)] -> parse (fmap g px) out)
+</pre>
+
+<ul>
+<li>Check the type of
+<pre>
+fmap (+) parserCharOrd
+fmap (+) parserCharOrd <*> parserCharOrd
+</pre>
+Write a parser <tt> sumOrdTwo</tt> that succeds with <tt> (ord x) + (ord y) </tt> if <tt> xy</tt> is a prefix of the input string.
+<pre>
+*Lab13Parser> parse sumOrdTwo "aaa"
+[(194,"a")]
+*Lab13Parser> parse sumOrdTwo "12a"
+[(99,"a")]
+</pre>
+Write <tt> sumOrdTwo</tt> in one line, using the <tt> fmap</tt> and <tt> <*></tt>. This definition can be easily generalized
+to return the corresponding sum for the first three characters of the input string. <br><br>
+
+ </li>
+<li> Write <tt> sumOrdThree</tt> which succeds with <tt> (ord x) + (ord y) + (ord z)</tt> if <tt> xyz</tt> is a prefix of the input
+<br>
+<br>
+<li> Write a parser <tt>number :: Parser Int </tt> which succeds with the digit corresponding to the first character and returns
+<tt> [] </tt> if the first character of the input string does not represent a digit.
+<pre>
+*Lab13Parser> parse number "1abc"
+[(1,"abc")]
+*Lab13Parser> parse number"12abc"
+[(1,"2abc")]
+*Lab13Parser> parse number "abc"
+[]
+</pre>
+</li>
+
+<li> Given the function
+<pre>
+no :: Int -> Int -> Int -> Int -> Int
+no x y z v = x*1000+y*100+z*10 + v
+</pre>
+define a parser <tt>numberFourTimes</tt> that succeds with the four digit number from the beginning of the input string
+and returns <tt>[]</tt> if the input string does not begin with four digit characters.
+<pre>
+*Lab13Parser> parse numberFourTimes "1234mmm"
+[(1234,"mmm")]
+*Lab13Parser> parse numberFourTimes "12345mmm"
+[(1234,"5mmm")]
+*Lab13Parser> parse numberFourTimes "123mmm"
+[]
+</pre>
+</li>
+</ul>
+
+
+
+<h3>Exercise 5 - file Lab13IO.hs </h3>
+
+For this exercise we follow: <a href="https://www.schoolofhaskell.com/school/advanced-haskell/functors-applicative-functors-and-monads">
+https://www.schoolofhaskell.com/school/advanced-haskell/functors-applicative-functors-and-monads </a>.
+<ul>
+<li> Write the function <tt>main :: IO ()</tt> that does the following:<br>
+ - ask the user to introduce his birth year <tt>by</tt><br>
+ - ask the user to introduce a future year <tt> fy </tt><br>
+ - calculates the difference <tt>d</tt> and display the message <tt> In fy you will be d years old </tt>.
+ </li>
+</ul>
+
+ In the sequel we treat the error cases, i.e. the user might introduce values that are not valid; precisely a valid input string
+ must begin with four digit characters that will  give the desired year using the parsers defined in Exercise 4.
+ To do this, we <tt> import Lab13Parser as LP</tt>.
+
+<ul>
+<li> Write a function <tt> valid  :: [(Int,String)] -> Maybe Int </tt> such that
+<pre>
+*Main> valid []
+Nothing
+*Main> valid[(1,"abc")]
+Just 1
+*Main> valid[(3,"")]
+Just 3
+</pre>
+</li>
+<li> Write a function <tt> readYear :: String -> Maybe Int</tt> such that
+<pre>
+*Main> readYear "1234lll"
+Just 1234
+*Main> readYear ""
+Nothing
+*Main> readYear "bj"
+Nothing
+*Main> readYear "123aaa"
+Nothing
+*Main> readYear "12345aaa"
+Just 1234
+</pre>
+To do this, use the functions defined in Exercise 4.
+</li>
+<li> Define the function <tt> maybeAge :: Maybe Int -> Maybe Int -> Maybe Int </tt> using
+the <tt> Applicative</tt> instance of <tt> Maybe </tt>.
+</li>
+<li> Write the function <tt> main </tt> taking into account that the user might introduce invalid data.
+<pre>
+*Main> main
+Please enter your birth year
+1234
+Please enter some year in the future
+1345
+In that year, you will be: 111
+
+*Main> main
+Please enter your birth year
+23jjkk
+Please enter some year in the future
+3456
+You provided invalid input
+
+*Main> main
+Please enter your birth year
+1234
+Please enter some year in the future
+3fggg
+You provided invalid input
+</pre>
+</li>
+<li> Display an error message if the year in the future is greater than the birth year.
+</li>
+</ul>
+
+
+</body>
+</html>
